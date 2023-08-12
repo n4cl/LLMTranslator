@@ -1,5 +1,4 @@
 import streamlit as st
-import random
 from llm_translator import Translator
 
 
@@ -13,14 +12,14 @@ def select_paramater():
     return model_name, temperature
 
 
-
 def main():
     st.title("LLM Translater")
     st.sidebar.title("Options")
 
-    # モデルの選択
     model_name, temperature = select_paramater()
     llm = Translator(model=model_name, temperature=temperature)
+    if "cost" not in st.session_state:
+        st.session_state.cost = 0.0
 
     col1, col2 = st.columns(2)
 
@@ -44,9 +43,9 @@ def main():
                 st.write("Failed to translate.")
 
     st.sidebar.markdown("## Costs")
-    st.sidebar.markdown("**Total cost**")
-    if translation and translation.is_success and translation.cost > 0:
-        st.sidebar.markdown(f"- ${translation.cost}")
+    if st.session_state.cost > 0 or (translation and translation.is_success and translation.cost > 0):
+        st.session_state.cost += translation.cost
+        st.sidebar.markdown(f"- {st.session_state.cost:.2f}")
     else:
         st.sidebar.markdown("- $0")
 
