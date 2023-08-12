@@ -13,8 +13,8 @@ class Translation:
     def __init__(self, translated_text="", is_success=True, error=""):
         self.translated_text: str = translated_text
         self.is_success: bool  = is_success
-        self.cost: float = None
-        self.tokens: int = None
+        self.cost: float = 0.0
+        self.tokens: int = 0
         self.error: str = error
 
     def __repr__(self):
