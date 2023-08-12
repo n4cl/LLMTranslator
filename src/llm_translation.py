@@ -35,16 +35,22 @@ def main():
 
     translation = None
     if st.button("Translate"):
-        with st.spinner("Translating ..."):
-            translation = llm.translate_and_get_cost(source_language=source_lang, target_language=target_lang, text=source_text)
-            if translation.is_success and translation.cost > 0:
-                st.write(translation.translated_text)
-            else:
-                st.write("Failed to translate.")
+        if source_lang == target_lang:
+            st.markdown("## WARNING:\nSource language and target language must be different.")
+        elif source_text == "":
+            st.markdown("## WARNING:\nPlease input text.")
+        else:
+            with st.spinner("Translating ..."):
+                translation = llm.translate_and_get_cost(source_language=source_lang, target_language=target_lang, text=source_text)
+                if translation.is_success and translation.cost > 0:
+                    st.write(translation.translated_text)
+                else:
+                    st.write("Failed to translate.")
 
     st.sidebar.markdown("## Costs")
-    if st.session_state.cost > 0 or (translation and translation.is_success and translation.cost > 0):
-        st.session_state.cost += translation.cost
+    if st.session_state.cost > 0:
+        if translation and translation.is_success and translation.cost > 0:
+            st.session_state.cost += translation.cost
         st.sidebar.markdown(f"- {st.session_state.cost:.2f}")
     else:
         st.sidebar.markdown("- $0")
