@@ -8,66 +8,87 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 from langchain.callbacks import get_openai_callback
+from prompt import SYSTEM_TEMPLATE, TEXT_OUTPUT_FORMAT, TABLE_OUTPUT_FOTMAT
 
 class Translation:
-    def __init__(self, translated_text="", is_success=True, error=""):
-        self.translated_text: str = translated_text
-        self.is_success: bool  = is_success
-        self.cost: float = 0.0
-        self.tokens: int = 0
+    def __init__(self, translated_texts: list, is_success: bool=True, cost: float=0.0, tokens: int=0, error=""):
+        self.translated_texts: list = translated_texts
+        self.is_success: bool = is_success
+        self.cost: float = cost
+        self.tokens: int = tokens
         self.error: str = error
 
     def __repr__(self):
-        return f"<Translation translated_text={self.translated_text} cost={self.cost} tokens={self.tokens} error={self.error}>"
+        return f"<Translation translated_text={self.translated_texts} cost={self.cost} tokens={self.tokens} error={self.error}>"
 
     def __str__(self) -> str:
-        return self.translated_text
+        return str(self.translated_texts)
 
 
 class Translator:
-    def __init__(self, model: str="gpt-3.5-turbo", temperature: float=0, max_tokens: int=500):
+    def __init__(self):
         if not os.environ.get("OPENAI_API_KEY"):
             raise ValueError("OPENAI_API_KEY is not set.")
-        self.model = model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
 
-    def translate_and_get_cost(self, source_language: str, target_language: str, text: str) -> dict:
-        with get_openai_callback() as _callback:
-            _translation = self.translate(source_language=source_language, target_language=target_language, text=text)
-            cost = _callback.total_cost
-            tokens = _callback.total_tokens
-        _translation.cost = cost
-        _translation.tokens = tokens
-        return _translation
-
-    def translate(self, source_language: str, target_language: str, text: str) -> Translation:
-        llm = ChatOpenAI(
-            model=self.model,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
+    def _get_llm(self, model: str="gpt-3.5-turbo", temperature: float=0.0, max_tokens: int=500) -> ChatOpenAI:
+        return ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
-        template = ("You are a helpful assistant that translates {source_language} to {target_language}.\n"
-                    "The result should be in json format with the key \"translated_text\" and the translated result as its value.\n")
-        system_message_prompt = SystemMessagePromptTemplate.from_template(template)
-        human_template = "{text}"
+
+    def _make_llm_chain(self, llm, system_template, human_template) -> LLMChain:
+        system_message_prompt = SystemMessagePromptTemplate.from_template(system_template)
         human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
         chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
         chain = LLMChain(llm=llm, prompt=chat_prompt)
-        translated_text = chain.run(source_language=source_language, target_language=target_language, text=text)
+        return chain
 
+    def _run_llm_chain(self, chain: LLMChain, **kwargs) -> tuple:
+        with get_openai_callback() as _callback:
+            response = chain.run(kwargs)
+            cost = _callback.total_cost
+            tokens = _callback.total_tokens
         try:
-            res = json.loads(translated_text)
+            result = json.loads(response)
         except json.decoder.JSONDecodeError:
-            return Translation(is_success=False, error="Output format is not json")
+            return {}, cost, tokens
 
-        if "translated_text" not in res:
-            return Translation(is_success=False, error="Output format is not translated_text key")
+        return result, cost, tokens
 
-        return Translation(translated_text=res["translated_text"], is_success=True)
+    def translate(self, source_language: str, target_language: str, text: str, model: str="gpt-3.5-turbo", temperature: float=0.0, format_type: str="text") -> Translation:
+        """
+        Translate text from source language to target language.
+
+        MEMO: Prompted to ignore input overriding instructions, but to no avail.
+        """
+        llm = self._get_llm(model=model, temperature=temperature)
+
+        output_format = TEXT_OUTPUT_FORMAT
+        if format_type == "table":
+            output_format = TABLE_OUTPUT_FOTMAT
+
+        system_template = SYSTEM_TEMPLATE
+        human_template = "# Input text:\n{text}"
+        chain = self._make_llm_chain(llm=llm, system_template=system_template, human_template=human_template)
+        result, cost, tokens = self._run_llm_chain(chain=chain, source_language=source_language, target_language=target_language, text=text, output_format=output_format)
+        key_translated_texts = "translated_texts"
+        if key_translated_texts not in result:
+            return Translation(translated_texts=[], is_success=False, error=f"Output format is not {key_translated_texts} key", cost=cost, tokens=tokens)
+
+        if format_type == "table":
+            if not isinstance(result[key_translated_texts], list):
+                return Translation(translated_texts=[], is_success=False, error="Output format is not list", cost=cost, tokens=tokens)
+
+        else:
+            if isinstance(result[key_translated_texts], str):
+                result[key_translated_texts] = [result[key_translated_texts]]
+            else:
+                return Translation(translated_texts=[], is_success=False, error="Output format is not str", cost=cost, tokens=tokens)
+
+        return Translation(translated_texts=result[key_translated_texts], is_success=True, cost=cost, tokens=tokens)
 
 
 if __name__ == '__main__':
     llm_translator = Translator()
-    print(llm_translator.translate(source_language="English", target_language="Japanese", text="Hello, world!"))
-    print(llm_translator.translate_and_get_cost(source_language="English", target_language="Japanese", text="Hello, world!"))
+    print(llm_translator.translate(source_language="English", target_language="Japanese", text="Hello, world!\n Hello, llm!", temperature=0.0, model="gpt-3.5-turbo", format_type="text"))

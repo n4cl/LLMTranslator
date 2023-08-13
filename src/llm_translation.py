@@ -17,7 +17,7 @@ def main():
     st.sidebar.title("Options")
 
     model_name, temperature = select_paramater()
-    llm = Translator(model=model_name, temperature=temperature)
+    llm = Translator()
     if "cost" not in st.session_state:
         st.session_state.cost = 0.0
 
@@ -41,7 +41,7 @@ def main():
             st.markdown("## WARNING:\nPlease input text.")
         else:
             with st.spinner("Translating ..."):
-                translation = llm.translate_and_get_cost(source_language=source_lang, target_language=target_lang, text=source_text)
+                translation = llm.translate(source_language=source_lang, target_language=target_lang, text=source_text, model=model_name, temperature=temperature)
                 if translation.is_success and translation.cost > 0:
                     st.write(translation.translated_text)
                 else:
