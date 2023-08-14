@@ -9,15 +9,16 @@ def select_paramater():
     else:
         model_name = "gpt-4"
     temperature = st.sidebar.slider("Temperature:", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
-    return model_name, temperature
+    format_type = st.sidebar.radio("Format type:", ("text", "table"))
+    return model_name, temperature, format_type
 
 
 def main():
     st.title("LLM Translater")
     st.sidebar.title("Options")
 
-    model_name, temperature = select_paramater()
-    llm = Translator(model=model_name, temperature=temperature)
+    model_name, temperature, format_type = select_paramater()
+    llm = Translator(debug=True)
     if "cost" not in st.session_state:
         st.session_state.cost = 0.0
 
@@ -41,17 +42,27 @@ def main():
             st.markdown("## WARNING:\nPlease input text.")
         else:
             with st.spinner("Translating ..."):
-                translation = llm.translate_and_get_cost(source_language=source_lang, target_language=target_lang, text=source_text)
-                if translation.is_success and translation.cost > 0:
-                    st.write(translation.translated_text)
-                else:
-                    st.write("Failed to translate.")
+                if format_type == "text":
+                    translation = llm.translate(source_lang, target_lang, source_text, model_name, temperature)
+                    if translation.error == "":
+                        st.write(translation.translated_texts[0])
+                    else:
+                        st.markdown(f"## WARNING:\n{translation.error}")
+                elif format_type == "table":
+                    translation = llm.translate_by_sentence(source_lang, target_lang, source_text, model_name, temperature)
+                    if translation.error == "":
+                        pair = [[s, t] for s, t in zip(translation.source_texts, translation.translated_texts)]
+                        st.table(pair)
+                    else:
+                        st.markdown(f"## WARNING:\n{translation.error}")
+
 
     st.sidebar.markdown("## Costs")
+    if translation and translation.is_success and translation.cost > 0:
+        st.session_state.cost += translation.cost
+
     if st.session_state.cost > 0:
-        if translation and translation.is_success and translation.cost > 0:
-            st.session_state.cost += translation.cost
-        st.sidebar.markdown(f"- {st.session_state.cost:.2f}")
+        st.sidebar.markdown(f"- ${st.session_state.cost:.5f}")
     else:
         st.sidebar.markdown("- $0")
 
