@@ -45,7 +45,7 @@ def main():
                 if format_type == "text":
                     translation = llm.translate(source_language, target_language, text, model, temperature, format_type)
                     if translation.error == "":
-                        st.write(translation.translated_texts[0])
+                        st.write(translation.translated_texts)
                     else:
                         st.markdown(f"## WARNING:\n{translation.error}")
                 elif format_type == "table":

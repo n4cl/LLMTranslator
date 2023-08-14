@@ -8,7 +8,7 @@ SYSTEM_TEMPLATE = ("You are a professional translator who translates {source_lan
 TEXT_OUTPUT_FORMAT = "- The result should be in json format with the key \"translated_texts\" and the translated result as its value.\n"
 TEXT_EXAMPLE = ("```json\n"
                 "{\n"
-                "  \"translated_texts\": \"Hello, how are you?\"\n"
+                "  \"translated_texts\": \"Hello, how are you? I'm fine, thank you.\"\n"
                 "}\n"
                 "```\n")
 
