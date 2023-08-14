@@ -3,6 +3,7 @@ SYSTEM_TEMPLATE = ("You are a professional translator who translates {source_lan
                    "# Constraints:\n"
                    "{output_format}\n")
 TEXT_OUTPUT_FORMAT = ("- The result should be in json format with the key \"translated_texts\" and the translated result as its value.\n"
+
                       "- Please refer to the following output format.\n"
                       "```json\n"
                       "{\n"
@@ -22,3 +23,5 @@ TABLE_OUTPUT_FOTMAT = ("- The outcome should be in JSON format.\n"
                        "  ]\n"
                        "}\n"
                        "```")
+
+HUMAN_TEMPLATE = "# Input text:\n{text}\n # Output text:\n"
