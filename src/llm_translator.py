@@ -170,13 +170,13 @@ class Translator:
         llm = self._get_llm(model=model, temperature=temperature)
 
         output_format = TEXT_OUTPUT_FORMAT
+        example = TEXT_EXAMPLE
         if format_type == "table":
             output_format = TABLE_OUTPUT_FOTMAT
-        example = TEXT_EXAMPLE
-        if source_language == "Japanese" and target_language == "English":
-            example = EXAMPLE_JA_TO_EN
-        elif source_language == "English" and target_language == "Japanese":
-            example = EXAMPLE_EN_TO_JA
+            if source_language == "Japanese" and target_language == "English":
+                example = EXAMPLE_JA_TO_EN
+            elif source_language == "English" and target_language == "Japanese":
+                example = EXAMPLE_EN_TO_JA
 
         system_template = SYSTEM_TEMPLATE
         human_template = HUMAN_TEMPLATE
@@ -196,8 +196,8 @@ class Translator:
                 return Translation(translated_texts=_translated_texts, is_success=True, cost=cost, tokens=tokens)
             return Translation(translated_texts=[], is_success=False, error="Output format is not list", error_no="e0001", cost=cost, tokens=tokens)
         else:
-            if isinstance(_translated_texts[0], str):
-                return Translation(translated_texts=_translated_texts[0], is_success=True, cost=cost, tokens=tokens)
+            if isinstance(_translated_texts, str):
+                return Translation(translated_texts=_translated_texts, is_success=True, cost=cost, tokens=tokens)
 
             return Translation(translated_texts=[], is_success=False, error="Output format is not str", error_no="e0002", cost=cost, tokens=tokens)
 
