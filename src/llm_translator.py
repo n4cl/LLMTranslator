@@ -190,20 +190,21 @@ class Translator:
         key_translated_texts = "translated_texts"
         if key_translated_texts not in result:
             return Translation(translated_texts=[], is_success=False, error=f"Output format is not {key_translated_texts} key", error_no="e0000", cost=cost, tokens=tokens)
-
+        _translated_texts = result[key_translated_texts]
         if format_type == "table":
-            if isinstance(result[key_translated_texts], list):
-                return Translation(translated_texts=result[key_translated_texts], is_success=True, cost=cost, tokens=tokens)
+            if isinstance(_translated_texts, list):
+                return Translation(translated_texts=_translated_texts, is_success=True, cost=cost, tokens=tokens)
             return Translation(translated_texts=[], is_success=False, error="Output format is not list", error_no="e0001", cost=cost, tokens=tokens)
         else:
-            if isinstance(result[key_translated_texts], str):
-                return Translation(translated_texts=[result[key_translated_texts]], is_success=True, cost=cost, tokens=tokens)
+            if isinstance(_translated_texts[0], str):
+                return Translation(translated_texts=_translated_texts[0], is_success=True, cost=cost, tokens=tokens)
 
             return Translation(translated_texts=[], is_success=False, error="Output format is not str", error_no="e0002", cost=cost, tokens=tokens)
 
 if __name__ == '__main__':
     llm_translator = Translator(debug=True)
     _text = "これはテキストです。テキスト1です。"
-    print(llm_translator.translate_by_sentence(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
+    #print(llm_translator.translate_by_sentence(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
+    print(llm_translator.translate(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
     #print(llm_translator.split_sentences(text="Hello, world! Hello, llm! How are you?"))
     #print(llm_translator.split_sentences(text="こんにちは\n テスト。元気ですか?"))
