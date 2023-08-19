@@ -6,18 +6,20 @@ def select_paramater():
     model = st.sidebar.radio("Choose a model:", ("GPT-3.5", "GPT-4"), horizontal=True)
     if model == "GPT-3.5":
         model_name = "gpt-3.5-turbo"
+        max_chars = 3000
     else:
         model_name = "gpt-4"
+        max_chars = 7000
     temperature = st.sidebar.slider("Temperature:", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
     format_type = st.sidebar.radio("Output format:", ("text", "table"), horizontal=True, index=1)
-    return model_name, temperature, format_type
+    return model_name, max_chars, temperature, format_type
 
 
 def main():
     st.title("LLM Translater")
     st.sidebar.title("Options")
 
-    model, temperature, format_type = select_paramater()
+    model, max_chars, temperature, format_type = select_paramater()
     llm = Translator(debug=True)
     if "cost" not in st.session_state:
         st.session_state.cost = 0.0
@@ -32,7 +34,7 @@ def main():
     with col2:
         target_language = st.selectbox("Target Language", ("English", "Japanese"))
 
-    text = st.text_area("Input", height=300)
+    text = st.text_area("Input", height=300, max_chars=max_chars)
 
     translation = None
     if st.button("Translate"):
