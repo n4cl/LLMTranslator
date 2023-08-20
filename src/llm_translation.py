@@ -25,14 +25,14 @@ def main():
         st.session_state.cost = 0.0
 
     col1, col2 = st.columns(2)
-
+    supported_launguage = ("English", "Japanese", "Chinese")
     # 左側のテキストエリアを配置
     with col1:
-        source_language = st.selectbox("Source Language", ("English", "Japanese"))
+        source_language = st.selectbox("Source Language", supported_launguage)
 
     # 右側のテキストエリアを配置
     with col2:
-        target_language = st.selectbox("Target Language", ("English", "Japanese"))
+        target_language = st.selectbox("Target Language", supported_launguage)
 
     text = st.text_area("Input", height=300, max_chars=max_chars)
 
