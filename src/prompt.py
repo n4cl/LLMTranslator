@@ -41,4 +41,30 @@ EXAMPLE_JA_TO_EN = ("```input (array)\n"
                     "}\n"
                     "```\n")
 
+EXAMPLE_JA_TO_CH = ("```input (array)\n"
+                    "[\"こんにちは、お元気ですか？\", \"ありがとう。\", \"こんにちは、お元気ですか？\"]"
+                    "```\n"
+                    "``` output (json)\n"
+                    "{\n"
+                    "  \"translated_texts\": [\n"
+                    "    \"你好吗？\",\n"
+                    "    \"我很好，谢谢你。\",\n"
+                    "    \"你好吗？\"\n"
+                    "  ]\n"
+                    "}\n"
+                    "```\n")
+
+EXAMPLE_EN_TO_CH = ("```input (array)\n"
+                    "[\"Hello, how are you?\", \"I'm fine, thank you.\", \"Hello, how are you?\"]"
+                    "```\n"
+                    "``` output (json)\n"
+                    "{\n"
+                    "  \"translated_texts\": [\n"
+                    "    \"你好吗？\",\n"
+                    "    \"我很好，谢谢你。\",\n"
+                    "    \"你好吗？\"\n"
+                    "  ]\n"
+                    "}\n"
+                    "```\n")
+
 HUMAN_TEMPLATE = "# Input text:\n{text}\n # Output text:\n"

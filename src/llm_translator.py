@@ -8,7 +8,8 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 from langchain.callbacks import get_openai_callback
-from prompt import SYSTEM_TEMPLATE, TEXT_OUTPUT_FORMAT, TABLE_OUTPUT_FOTMAT, HUMAN_TEMPLATE, EXAMPLE_EN_TO_JA, EXAMPLE_JA_TO_EN, TEXT_EXAMPLE
+from prompt import SYSTEM_TEMPLATE, TEXT_OUTPUT_FORMAT, TABLE_OUTPUT_FOTMAT, HUMAN_TEMPLATE, TEXT_EXAMPLE, \
+                   EXAMPLE_EN_TO_JA, EXAMPLE_JA_TO_EN, EXAMPLE_JA_TO_CH, EXAMPLE_EN_TO_CH
 
 
 def remove_line_feed_code(text: str) -> str:
@@ -177,6 +178,10 @@ class Translator:
                 example = EXAMPLE_JA_TO_EN
             elif source_language == "English" and target_language == "Japanese":
                 example = EXAMPLE_EN_TO_JA
+            elif source_language == "Japanese" and target_language == "Chinese":
+                example = EXAMPLE_JA_TO_CH
+            elif source_language == "English" and target_language == "Chinese":
+                example = EXAMPLE_EN_TO_CH
 
         system_template = SYSTEM_TEMPLATE
         human_template = HUMAN_TEMPLATE
