@@ -1,5 +1,7 @@
 import os
 import json
+
+from bunkai import Bunkai
 from langchain.chat_models import ChatOpenAI
 from langchain import LLMChain
 from langchain.prompts.chat import (
@@ -9,6 +11,7 @@ from langchain.prompts.chat import (
 )
 from langchain.callbacks import get_openai_callback
 from prompt import SYSTEM_TEMPLATE, TEXT_OUTPUT_FORMAT, TABLE_OUTPUT_FOTMAT, HUMAN_TEMPLATE, EXAMPLE_EN_TO_JA, EXAMPLE_JA_TO_EN, TEXT_EXAMPLE
+from const import EN, JA
 
 
 def remove_line_feed_code(text: str) -> str:
@@ -68,6 +71,7 @@ class Translator:
     def __init__(self, debug: bool=False):
         if not os.environ.get("OPENAI_API_KEY"):
             raise ValueError("OPENAI_API_KEY is not set.")
+        self.japaneses_splitter = Bunkai()
         self.debug = debug
 
     def _get_llm(self, model: str="gpt-3.5-turbo", temperature: float=0.0, max_tokens: int=2000) -> ChatOpenAI:
@@ -104,7 +108,11 @@ class Translator:
         """
 
         base_error_message = "Failed to translate."
-        splited_sentences = self.split_sentences(text=text)
+        if source_language == JA:
+            splited_sentences = self.split_sentences_by_rule(text=text)
+        else:
+            splited_sentences = self.split_sentences_by_llm(text=text)
+
         if splited_sentences.is_success:
             _source_text = splited_sentences.dump()
         else:
@@ -127,9 +135,20 @@ class Translator:
             return translation
         return Translation(translated_texts=[], is_success=False, error=base_error_message, error_no="e0201")
 
-    def split_sentences(self, text: str) -> SplitedSentence:
+    def split_sentences_by_rule(self, text: str) -> SplitedSentence:
         """
-        Split text into sentences.
+        Split text into sentences using rule base.
+        """
+        texts = []
+        empty_text = ""
+        for _t in self.japaneses_splitter(text):
+            if _t.strip() != empty_text:
+                texts.append(_t)
+        return SplitedSentence(split_sentences=texts, is_success=True, cost=0.0, tokens=0, error="")
+
+    def split_sentences_by_llm(self, text: str) -> SplitedSentence:
+        """
+        Split text into sentences using LLM.
         """
         text = remove_line_feed_code(text)
         llm = self._get_llm(model="gpt-3.5-turbo", temperature=0.0)
@@ -202,9 +221,9 @@ class Translator:
             return Translation(translated_texts=[], is_success=False, error="Output format is not str", error_no="e0002", cost=cost, tokens=tokens)
 
 if __name__ == '__main__':
+    _text = "これはテキストです。テキスト1です。\nテストです。"
     llm_translator = Translator(debug=True)
-    _text = "これはテキストです。テキスト1です。"
-    #print(llm_translator.translate_by_sentence(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
-    print(llm_translator.translate(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
+    print(llm_translator.translate_by_sentence(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
+    #print(llm_translator.translate(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
     #print(llm_translator.split_sentences(text="Hello, world! Hello, llm! How are you?"))
     #print(llm_translator.split_sentences(text="こんにちは\n テスト。元気ですか?"))

@@ -1,6 +1,6 @@
 import streamlit as st
 from llm_translator import Translator
-
+from const import JA, EN
 
 def select_paramater():
     model = st.sidebar.radio("Choose a model:", ("GPT-3.5", "GPT-4"), horizontal=True)
@@ -28,11 +28,11 @@ def main():
 
     # 左側のテキストエリアを配置
     with col1:
-        source_language = st.selectbox("Source Language", ("English", "Japanese"))
+        source_language = st.selectbox("Source Language", (EN, JA))
 
     # 右側のテキストエリアを配置
     with col2:
-        target_language = st.selectbox("Target Language", ("English", "Japanese"))
+        target_language = st.selectbox("Target Language", ((EN, JA)))
 
     text = st.text_area("Input", height=300, max_chars=max_chars)
 
