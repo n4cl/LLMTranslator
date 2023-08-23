@@ -1,0 +1,2 @@
+EN = "English"
+JA = "Japanese"
