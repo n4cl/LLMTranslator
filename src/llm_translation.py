@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from llm_translator import Translator
 from const import JA, EN
 
@@ -32,7 +33,7 @@ def main():
 
     # 右側のテキストエリアを配置
     with col2:
-        target_language = st.selectbox("Target Language", ((EN, JA)))
+        target_language = st.selectbox("Target Language", (EN, JA))
 
     text = st.text_area("Input", height=300, max_chars=max_chars)
 
@@ -55,6 +56,8 @@ def main():
                     if translation.error == "":
                         pair = [[s, t] for s, t in zip(translation.source_texts, translation.translated_texts)]
                         st.table(pair)
+                        pd_pair = pd.DataFrame(pair, columns=["Source", "Target"])
+                        st.download_button("Download csv", data=pd_pair.to_csv(index=False), file_name="pair.csv", mime="text/csv")
                     elif translation.error_no == "e0200":
                         st.write("## WARNING:\nCould not output in table.")
                         st.write("\n".join(translation.translated_texts))
