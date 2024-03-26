@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from component_template import generate_default_paramater
 from const import JA, EN
+from llm_qa import QualityAssurance
 
 def main():
     st.title("QA")
@@ -18,13 +19,23 @@ def main():
     with col2:
         target_language = st.selectbox("Target Language", (EN, JA))
 
-    # csvファイルのアップロード
-    uploaded_file = st.file_uploader("Choose a file", type="csv")
-    if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file, header=None)
+    # tsvファイルのアップロード
+    uploaded_file = st.file_uploader("Choose a file", type="tsv")
+    if uploaded_file:
+        qa = QualityAssurance(source_language=source_language,
+                              target_language=target_language,
+                              model=model,
+                              temperature=temperature,
+                              debug=True)
+
+        df = pd.read_csv(uploaded_file, header=None, delimiter="\t")
         df.columns = ["source", "target"]
         st.write(df)
-        st.button("Quality Assurance")
+        if st.button("Check"):
+            with st.spinner("Checking..."):
+                res = qa.check_translation(translation_data=df)
+                print("QA")
+                st.write(res)
 
 if __name__ == "__main__":
     main()
