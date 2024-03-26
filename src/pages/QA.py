@@ -34,7 +34,6 @@ def main():
         if st.button("Check"):
             with st.spinner("Checking..."):
                 res = qa.check_translation(translation_data=df)
-                print("QA")
                 st.write(res)
 
 if __name__ == "__main__":
