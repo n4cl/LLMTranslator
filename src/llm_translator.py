@@ -1,14 +1,9 @@
-import os
 import json
-from langchain.chat_models import ChatOpenAI
-from langchain import LLMChain
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
-from langchain.callbacks import get_openai_callback
-from prompt import SYSTEM_TEMPLATE, TEXT_OUTPUT_FORMAT, TABLE_OUTPUT_FOTMAT, HUMAN_TEMPLATE, EXAMPLE_EN_TO_JA, EXAMPLE_JA_TO_EN, TEXT_EXAMPLE
+
+from llm import LLM
+from bunkai import Bunkai
+from translation_prompt import SYSTEM_TEMPLATE, TEXT_OUTPUT_FORMAT, TABLE_OUTPUT_FOTMAT, HUMAN_TEMPLATE, EXAMPLE_EN_TO_JA, EXAMPLE_JA_TO_EN, TEXT_EXAMPLE
+from const import EN, JA
 
 
 def remove_line_feed_code(text: str) -> str:
@@ -46,8 +41,8 @@ class Translation:
 
 
 class SplitedSentence:
-    def __init__(self, split_sentences: list, is_success: bool=True, cost: float=0.0, tokens: int=0, error="", error_no=""):
-        self.split_sentences: list = split_sentences
+    def __init__(self, texts: list, is_success: bool=True, cost: float=0.0, tokens: int=0, error="", error_no=""):
+        self.texts: list = texts
         self.is_success: bool = is_success
         self.cost: float = cost
         self.tokens: int = tokens
@@ -55,48 +50,19 @@ class SplitedSentence:
         self.error_no: str = error_no
 
     def dump(self) -> str:
-        return json.dumps(self.split_sentences)
+        return json.dumps(self.texts)
 
     def __repr__(self):
-        return f"<SplitedSentence split_sentences={self.split_sentences} cost={self.cost} tokens={self.tokens} error={self.error}>"
+        return f"<SplitedSentence texts={self.texts} cost={self.cost} tokens={self.tokens} error={self.error}>"
 
     def __str__(self) -> str:
-        return str(self.split_sentences)
+        return str(self.texts)
 
 
-class Translator:
+class Translator(LLM):
     def __init__(self, debug: bool=False):
-        if not os.environ.get("OPENAI_API_KEY"):
-            raise ValueError("OPENAI_API_KEY is not set.")
-        self.debug = debug
-
-    def _get_llm(self, model: str="gpt-3.5-turbo", temperature: float=0.0, max_tokens: int=2000) -> ChatOpenAI:
-        return ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-
-    def _make_llm_chain(self, llm, system_template, human_template) -> LLMChain:
-        system_message_prompt = SystemMessagePromptTemplate.from_template(system_template)
-        human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
-        chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
-        chain = LLMChain(llm=llm, prompt=chat_prompt)
-        return chain
-
-    def _run_llm_chain(self, chain: LLMChain, **kwargs) -> tuple:
-        with get_openai_callback() as _callback:
-            response = chain.run(kwargs)
-            cost = _callback.total_cost
-            tokens = _callback.total_tokens
-        try:
-            if self.debug:
-                print(response)
-            result = json.loads(response, strict=False)
-        except json.decoder.JSONDecodeError:
-            return {}, cost, tokens
-
-        return result, cost, tokens
+        super().__init__(debug=debug)
+        self.japaneses_splitter = Bunkai()
 
     def translate_by_sentence(self, source_language, target_language, text, model, temperature):
         """
@@ -104,7 +70,11 @@ class Translator:
         """
 
         base_error_message = "Failed to translate."
-        splited_sentences = self.split_sentences(text=text)
+        if source_language == JA:
+            splited_sentences = self.split_sentences_by_rule(text=text)
+        else:
+            splited_sentences = self.split_sentences_by_llm(text=text)
+
         if splited_sentences.is_success:
             _source_text = splited_sentences.dump()
         else:
@@ -113,7 +83,7 @@ class Translator:
         translation = self.translate(source_language, target_language, _source_text, model, temperature, format_type="table")
 
         if translation and translation.is_success:
-            translation.set_source_texts(splited_sentences.split_sentences)
+            translation.set_source_texts(splited_sentences.texts)
             # Verify that the number of cases in the source and target texts match.
             if translation.verify_text_pair():
                 return translation
@@ -127,9 +97,20 @@ class Translator:
             return translation
         return Translation(translated_texts=[], is_success=False, error=base_error_message, error_no="e0201")
 
-    def split_sentences(self, text: str) -> SplitedSentence:
+    def split_sentences_by_rule(self, text: str) -> SplitedSentence:
         """
-        Split text into sentences.
+        Split text into sentences using rule base.
+        """
+        texts = []
+        empty_text = ""
+        for _t in self.japaneses_splitter(text):
+            if _t.strip() != empty_text:
+                texts.append(_t)
+        return SplitedSentence(texts=texts, is_success=True, cost=0.0, tokens=0, error="")
+
+    def split_sentences_by_llm(self, text: str) -> SplitedSentence:
+        """
+        Split text into sentences using LLM.
         """
         text = remove_line_feed_code(text)
         llm = self._get_llm(model="gpt-3.5-turbo", temperature=0.0)
@@ -154,12 +135,12 @@ class Translator:
 
         key_split_sentences = "split_sentences"
         if key_split_sentences not in result:
-            return SplitedSentence(split_sentences=[], is_success=False, error=f"Output format is not {key_split_sentences} key", error_no="e0100", cost=cost, tokens=tokens)
+            return SplitedSentence(texts=[], is_success=False, error=f"Output format is not {key_split_sentences} key", error_no="e0100", cost=cost, tokens=tokens)
 
         if not isinstance(result[key_split_sentences], list):
-            return SplitedSentence(split_sentences=[], is_success=False, error="Output format is not list", error_no="e0101", cost=cost, tokens=tokens)
+            return SplitedSentence(texts=[], is_success=False, error="Output format is not list", error_no="e0101", cost=cost, tokens=tokens)
 
-        return SplitedSentence(split_sentences=result[key_split_sentences], is_success=True, cost=cost, tokens=tokens)
+        return SplitedSentence(texts=result[key_split_sentences], is_success=True, cost=cost, tokens=tokens)
 
     def translate(self, source_language: str, target_language: str, text: str, model: str="gpt-3.5-turbo", temperature: float=0.0, format_type: str="text") -> Translation:
         """
@@ -173,9 +154,9 @@ class Translator:
         example = TEXT_EXAMPLE
         if format_type == "table":
             output_format = TABLE_OUTPUT_FOTMAT
-            if source_language == "Japanese" and target_language == "English":
+            if source_language == JA and target_language == EN:
                 example = EXAMPLE_JA_TO_EN
-            elif source_language == "English" and target_language == "Japanese":
+            elif source_language == EN and target_language == JA:
                 example = EXAMPLE_EN_TO_JA
 
         system_template = SYSTEM_TEMPLATE
@@ -202,9 +183,9 @@ class Translator:
             return Translation(translated_texts=[], is_success=False, error="Output format is not str", error_no="e0002", cost=cost, tokens=tokens)
 
 if __name__ == '__main__':
+    _text = "これはテキストです。テキスト1です。\nテストです。"
     llm_translator = Translator(debug=True)
-    _text = "これはテキストです。テキスト1です。"
-    #print(llm_translator.translate_by_sentence(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
-    print(llm_translator.translate(source_language="Japanese", target_language="English", text=_text, temperature=0.0, model="gpt-3.5-turbo"))
+    #print(llm_translator.translate_by_sentence(source_language=JA, target_language=EN, text=_text, temperature=0.0, model="gpt-3.5-turbo"))
+    print(llm_translator.translate(source_language=JA, target_language=EN, text=_text, temperature=0.0, model="gpt-3.5-turbo"))
     #print(llm_translator.split_sentences(text="Hello, world! Hello, llm! How are you?"))
     #print(llm_translator.split_sentences(text="こんにちは\n テスト。元気ですか?"))
