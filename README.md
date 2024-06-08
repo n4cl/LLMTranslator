@@ -13,6 +13,7 @@ LLMTranslator is a translation system that utilizes OpenAI's API.
 
 ``` shell
 export OPENAI_API_KEY=${OPENAI_API_KEY}
-pip install -r requirements_front.txt
-streamlit run src/top.py
+pip install pipenv
+pipenv install
+pipenv run streamlit run src/top.py
 ```
